@@ -3,6 +3,9 @@ library(dplyr)
 library(tidyr)
 library(tidyverse)
 library(data.table)
+library(caret)
+library(mlbench)
+library(logitnorm)
 
 accounts <- fread('all_accounts.csv')
 
@@ -162,7 +165,6 @@ count(bureau, bureau$BUREAU_SCORE)
 count(bureau, bureau$BAL_NON_DELQ)
 count(bureau, bureau$BAL_30DPD)
 colnames(bureau)
-unique(bureau$CUSTOMER_UNIQUE_ID)
 
 #customer unique id as a string
 bureau$CUSTOMER_UNIQUE_ID <- sprintf("%f", bureau$CUSTOMER_UNIQUE_ID)
@@ -366,7 +368,8 @@ demographics <- demographics %>% mutate(DEPENDENT_OTHERS=recode(DEPENDENT_OTHERS
 
 demographics <- demographics %>% mutate(SEX=recode(SEX, `M`=7 , `F`=10, `P`=1, `NA `=1))
 
-#colnames(demographics)[apply(demographics,1,anyNA)
+demographics <- demographics %>% mutate_all(~replace(.,is.na(.), 1))
+
 
 #count(demographics, demographics$MARITAL_STATUS)
 
@@ -382,6 +385,18 @@ df <-merge(df, cashFlowBalanceRating, by=intersect(names(df), names(cashFlowBala
 
 df <-merge(df, Debt_Profile, by=intersect(names(df), names(Debt_Profile)), by.df ="CUSTOMER_UNIQUE_ID", by.Debt_Profile ="CUSTOMER_UNIQUE_ID", all=TRUE, all.df=all, all.Debt_Profile=all, sort=TRUE, suffixes=c(".df", ".Debt_Profile"), no.dups=TRUE, incomparables = NULL)
 
+df <-merge(df, demographics, by=intersect(names(df), names(demographics)), by.df ="CUSTOMER_UNIQUE_ID", by.demographics ="CUSTOMER_UNIQUE_ID", all=TRUE, all.df=all, all.demographics=all, sort=TRUE, suffixes=c(".df", ".demographics"), no.dups=TRUE, incomparables = NULL)
+
+df <-merge(df, LoanAppCredit, by=intersect(names(df), names(LoanAppCredit)), by.df ="CUSTOMER_UNIQUE_ID", by.LoanAppCredit ="CUSTOMER_UNIQUE_ID", all=TRUE, all.df=all, all.LoanAppCredit=all, sort=TRUE, suffixes=c(".df", ".LoanAppCredit"), no.dups=TRUE, incomparables = NULL)
+
+
+#Assigning all NA values to 1. This is to be on the safe side as the customers affected do not have these information on their profile. Rather than completely discard them, which will ultimately have a negative effect on our data set, we set the NA values to the least rating (just to assume worse case scenerios for the customers whose details are missing, resulting in the NA values). When the customers eventually provide these information when they come to apply for loans, their credit scores can then be boosted appropriately.
+
+# Recoding the Loan_Classification column
+df <- df %>% mutate(LOAN_CLASSIFICATION=recode(LOAN_CLASSIFICATION, `PERFORMING`= 1, `NON-PERFORMING`=0))
+
+df <- df %>% mutate_all(~replace(.,is.na(.), 1))
+df <- as.numeric(df)
 
 
 count(df, df$BALANCE_RATING)
@@ -391,3 +406,79 @@ count(df, df$history_Rating)
 count(df, df$loanHistory_Rating)
 count(df, df$Balance_Rating)
 count(df, df$Debt_Rating)
+unique(df)
+count(df, df$CUSTOMER_CATEGORY)
+count(df, df$MARITAL_STATUS)
+count(df, df$LOAN_CLASSIFICATION)
+
+#dropping columns
+df <- subset(df, select = -c(MEAN_APPLIED_AMOUNT))
+
+#Summing up all rows
+df$TOTAL_SCORE <- df$BALANCE_RATING + df$HIGHEST_BALANCE_RATING + df$BALANCE_HISTORY_RATING + df$history_Rating + df$loanHistory_Rating + df$Balance_Rating + df$Debt_Rating + df$CUSTOMER_CATEGORY + df$MINOR + df$MARITAL_STATUS + df$DEPENDENT_OTHERS + df$SEX + df$NEW_LOAN_RATING
+
+# Assigning the TOTAL POSSIBLE SCORE
+df$TOTAL_POSSIBLE_SCORE <- 130
+
+# Finding the PERCENTAGE of the CREDIT_SCORES
+df$CREDIT_SCORE_PERCENT <- ((df$TOTAL_SCORE/df$TOTAL_POSSIBLE_SCORE)*100)
+df$CREDIT_SCORE_PERCENT <-round(df$CREDIT_SCORE_PERCENT)
+
+# Assigning the MINIMUM_PERCENT of SCORES allowed
+df$MINIMUM_PERCENT_SCORE <- 50
+
+# Indexing the CUSTOMER_UNIQUE_ID to become a row name, as a means of identifying the customers rather than a variable in the data set
+
+count <- count(df, df$CREDIT_SCORE_PERCENT)
+max(df$TOTAL_SCORE)
+
+df$CUSTOMER_UNIQUE_ID <- as.numeric(df$CUSTOMER_UNIQUE_ID)
+
+
+
+# Regression Analysis for my credit score model
+
+# First dividing the data set into train and test set...
+
+dt = sort(sample(nrow(df), nrow(df)*.7))
+train <- (df[dt,])
+test <- (df[-dt,])
+
+# Search for redundant variables
+
+set.seed(1000000000)
+CorrelationMatrix <- cor(df)
+library(corrplot)
+corrplot::corrplot(CorrelationMatrix,  method = 'square') 
+corrplot(CorrelationMatrix, type = "lower")  
+corrplot.mixed(CorrelationMatrix, lower.col = "black", number.cex = .9)
+
+
+
+# train the model: 
+#I tried to do the recursive feature selection for these variables, but because their correlation values are very similar with regards to our dependent variable, the RFE didn't work. So now, we'll try a linear model.
+
+CSF <- lm(CREDIT_SCORE_PERCENT~ train$BALANCE_RATING+train$HIGHEST_BALANCE_RATING+train$BALANCE_HISTORY_RATING+train$history_Rating+train$loanHistory_Rating+train$Balance_Rating+train$Debt_Rating+train$CUSTOMER_CATEGORY+train$MINOR+train$MARITAL_STATUS+train$DEPENDENT_OTHERS+train$SEX+train$NEW_LOAN_RATING, data=train)
+
+plot(CSF)
+summary(CSF)
+anova(CSF)
+
+## Predictive analysis for the credit score framework
+predict(CSF, data.frame(test))
+predCSF <- as.data.frame(predict(CSF, data.frame(test)))
+
+
+# Loan Classification Model (Logit Model)...
+LCM <- glm(LOAN_CLASSIFICATION ~ BALANCE_RATING + HIGHEST_BALANCE_RATING + BALANCE_HISTORY_RATING + history_Rating + loanHistory_Rating + Balance_Rating + Debt_Rating + CUSTOMER_CATEGORY + MINOR + MARITAL_STATUS + DEPENDENT_OTHERS + SEX + NEW_LOAN_RATING, data=train, family = binomial(link = "logit"))
+summary(LCM)
+
+# Predictive analysis for the loan classification model
+predLCM <- predict(LCM, data.frame(test))
+invlogit(predLCM)
+
+table(test$LOAN_CLASSIFICATION, invlogit(predLCM) > 0.5)
+
+predLCM <- as.data.frame(round(as.numeric(invlogit(predLCM))))
+
+# Conclusion
