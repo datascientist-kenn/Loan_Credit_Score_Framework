@@ -1,3 +1,22 @@
+---
+title: "Untitled"
+author: "Kenneth I. D., Ayooluwa Adedipe, Patience Kadri"
+date: "3/6/2020"
+output: html_document
+---
+
+---
+title: "Exploring The 'mtcars' Data Set"
+author: "Kenneth I. D., Ayooluwa Adedipe, Patience Kadri"
+date: "2/1/2020"
+output:
+  html_document: default
+  pdf_document: default
+  word_document: default
+---
+
+
+
 library(plyr)
 library(dplyr)
 library(tidyr)
@@ -8,39 +27,68 @@ library(mlbench)
 library(logitnorm)
 library(mlr)
 
+
+Importing the all_accounts dataset
+
+```{r, echo=FALSE}
+library(plyr)
 accounts <- fread('all_accounts.csv')
 
 count(accounts, CCY)
+```
+Converting all currencies to Naira
 
+```
 newCCY <- accounts %>%
   mutate(CCY=recode(CCY, `NGN`=1, `GBP`=471.9, `USD`= 365.5, `EUR`=398.33))
+```
 
-#setting customer id as a string
+Setting customer id as a string
+
+```{r, echo=FALSE}
 accounts$CUSTOMER_UNIQUE_ID <- sprintf("%f", accounts$CUSTOMER_UNIQUE_ID)
 newCCY$CUSTOMER_UNIQUE_ID <- sprintf("%f", newCCY$CUSTOMER_UNIQUE_ID)
+```
 
-#multiplying the balance and the new CCY in the newCCY table
+Multiplying the balance and the new CCY in the newCCY table
+
+```{r, echo=FALSE}
 newAVL_BAL <- as.data.frame(newCCY$ACY_AVL_BAL*newCCY$CCY)
 newAVL_BAL$new_AVL_BAL <- newAVL_BAL$`newCCY$ACY_AVL_BAL * newCCY$CCY`
+```
 
-#Drop column on the new table
+Dropping columns on the new table
+
+```{r, echo=FALSE}
 newAVL_BAL <- subset(newAVL_BAL, select = c(new_AVL_BAL))
+```
+Merging newAVL_BAL to the accounts table
 
-#merging newAVL_BAL to the accounts table
+```{r, echo=FALSE}
 accounts <- c(accounts, newAVL_BAL)
 accounts <- as.data.frame(accounts)
+```
 
-# Dropping columns on the accounts table
+Dropping columns on the accounts table
+
+```{r, echo=FALSE}
 accounts <- subset(accounts, select = -c(ACY_AVL_BAL, CCY))
 accounts <- subset(accounts, select = -c(RECORD_STAT, MASKED_ACCOUNT))
+```
 
-#Sum the available balance
+Sum the available balance
+
+```{r, echo=FALSE}
 availBalance <- accounts %>% 
   group_by(CUSTOMER_UNIQUE_ID) %>%
   summarise(AVAIL_BALANCE = sum(new_AVL_BAL))
 
 availBalance$AVAIL_BALANCE <- availBalance$AVAIL_BALANCE
+```
 
+Assigning a rating scale to the balances
+
+```{r, echo=FALSE}
 availBalance$BALANCE_RATING = 
   ifelse(availBalance$`AVAIL_BALANCE` <= 1000, 4,
     ifelse(availBalance$`AVAIL_BALANCE` <= 5000, 5,
@@ -51,25 +99,39 @@ availBalance$BALANCE_RATING =
               ifelse(availBalance$`AVAIL_BALANCE` <= 1000000, 9, 10)))))))
 
 acctBalanceRating = subset(availBalance, select = -c(AVAIL_BALANCE))
+```
 
+```{r, echo=FALSE}
 count(availBalance, BALANCE_RATING)
+```
 
-### WE WILL MAKE USE OF THE ACCOUNT_BALANCE_RATING TABLE FOR MERGING. THIS IS THE AMOUNT OF MONEY AVAILABLE IN THE CUSTOMER'S ACCOUNT AS AT THE LAST BOOKING DATE ON THE DATASET.
+WE WILL MAKE USE OF THE ACCOUNT_BALANCE_RATING TABLE FOR MERGING. THIS IS THE AMOUNT OF MONEY AVAILABLE IN THE CUSTOMER'S ACCOUNT AS AT THE LAST BOOKING DATE ON THE DATASET.
 
+Importing the all_balances dataset
 
-
+```{r, echo=FALSE}
 balances <- fread('all_balances.csv')
+```
 
-#make customer id a string variable
+Make Customer Unique ID a string variable
+
+```{r, echo=FALSE}
 balances$CUSTOMER_UNIQUE_ID <- sprintf("%f", balances$CUSTOMER_UNIQUE_ID)
+```
 
+Summing up all the balances 
+
+```{r, echo=FALSE}
 allBalances <- balances %>%
   group_by(CUSTOMER_UNIQUE_ID) %>%
   summarize(VALUE_DATE=max(VAL_DT), HIGHEST_BALANCE= max(BAL), MEAN_BALANCE= mean(BAL), BALANCE_HISTORY= sum(BAL))
 
 balanceHistory = subset(allBalances, select= -c(VALUE_DATE, MEAN_BALANCE))
+```
 
-#GRADING THE HIGHEST BALANCE OF THE CUSTOMERS
+GRADING THE HIGHEST BALANCE OF THE CUSTOMERS
+
+```{r, echo=FALSE}
 balanceHistory$HIGHEST_BALANCE_RATING = 
   ifelse(balanceHistory$`HIGHEST_BALANCE` <= 1000, 4,
     ifelse(balanceHistory$`HIGHEST_BALANCE` <= 5000, 5,
@@ -78,9 +140,10 @@ balanceHistory$HIGHEST_BALANCE_RATING =
           ifelse(balanceHistory$`HIGHEST_BALANCE` <= 100000, 7,
             ifelse(balanceHistory$`HIGHEST_BALANCE` <= 500000, 8,
               ifelse(balanceHistory$`HIGHEST_BALANCE` <= 1000000, 9, 10)))))))
+```
 
-
-#GRADING THE BALANCE_HISTORY OF THE CUSTOMERS
+Grading the BALANCE_HISTORY of the customers
+```{r, echo=FALSE}
 balanceHistory$BALANCE_HISTORY_RATING = 
   ifelse(balanceHistory$`BALANCE_HISTORY` <= 1000, 4,
     ifelse(balanceHistory$`BALANCE_HISTORY` <= 5000, 5,
@@ -94,55 +157,65 @@ count(balanceHistory, HIGHEST_BALANCE_RATING)
 count(balanceHistory, BALANCE_HISTORY_RATING)
 
 balanceHistoryRating <- subset(balanceHistory, select = -c(HIGHEST_BALANCE, BALANCE_HISTORY))
+```
 
-### WE MAKE USE OF BOTH THE HIGHEST_BALANCE AND BALANCE_HISTORY TABLE FOR OUR ANALYSIS.THIS TABLE CONTAINS THE HIGHEST ACCOUNT BALANCE IN THIS CUSTOMER'S HISTORY. IT ALSO CONTAINS THE SUM OF ALL THE AMOUNTS THAT HAS PASSED THROUGH THIS CUSTOMER'S ACCOUNT.
+We make use of both the HIGHEST_BALANCE and the BALANCE_HISTORY table for our analysis. This table contains the highest account balance in the customers' histories. It also contains the sum of all the amounts that has passed through the customers' accounts
 
+I DID NOT RUN THE FOLLOWING CODES BELOW BECAUSE OF THE TOLL THEY TAKE ON MY PC. INSTEAD, I TOOK THE PATIENCE OF RECODING THE DATASET, DROPPING SOME COLUMNS AND PARSING INTO A NEW CSV FILE 
 
+Importing the all_transactions_digital table
 
-########## I DID NOT RUN THE FOLLOWING CODES BELOW BECAUSE OF THE TOLL THEY TAKE ON MY PC. INSTEAD, I TOOK THE PATIENCE OF RECODING THE DATASET, DROPPING SOME COLUMNS AND PARSING INTO A NEW CSV FILE 
-#Importing the all_transactions_digital table
+__trans <- fread('all_transactions_digital.csv')__
 
-#trans <- fread('all_transactions_digital.csv')
+setting customer id as a string
+__trans$CUSTOMER_UNIQUE_ID <- sprintf("%f", trans$CUSTOMER_UNIQUE_ID)__
+__newTrans <- subset(trans, select= c(CUSTOMER_UNIQUE_ID, AC_CCY, LCY_AMOUNT, DRCR_IND))__
+__newTrans <- newTrans %>%mutate(AC_CCY=recode(AC_CCY, `NGN`=1, `GBP`=471.9, `USD`= 365.5, `EUR`=398.33))__
 
-#setting customer id as a string
-#trans$CUSTOMER_UNIQUE_ID <- sprintf("%f", trans$CUSTOMER_UNIQUE_ID)
+multiplying the LCY_AMOUNT and EX_RATE in the table
+__newTrans$AMOUNT <- as.data.frame(newTrans$AC_CCY*newTrans$LCY_AMOUNT)__
+__newTrans$AMOUNT <- AMOUNT.newTrans$AC_CCY*newTrans$LCY_AMOUNT__
 
-#newTrans <- subset(trans, select= c(CUSTOMER_UNIQUE_ID, AC_CCY, LCY_AMOUNT, DRCR_IND))
+Categorising the Product with Dummy Variables
+library(dummies)
+__transClean <- dummy(newTrans$DRCR_IND, sep="_")__
+__transClean <- as.data.frame(transClean)__
+__transClean$DRCR_IND <- transClean__ this puts all the new dummy columns back into the data frame
+__newTrans$CREDIT <- transClean$DRCR_IND_C__
+__newTrans$DEBIT <- transClean$DRCR_IND_D__
+__newTrans$CUSTOMER_UNIQUE_ID = sprintf("%f", newTrans$CUSTOMER_UNIQUE_ID)__
 
-#newTrans <- newTrans %>%mutate(AC_CCY=recode(AC_CCY, `NGN`=1, `GBP`=471.9, `USD`= 365.5, `EUR`=398.33))
+__cashFlow <- newTrans %>%
+group_by(CUSTOMER_UNIQUE_ID, CREDIT, DEBIT) %>%
+summarize(TOTAL_CREDIT = CREDIT%*%LCY_AMOUNT, TOTAL_DEBIT = LCY_AMOUNT%*%DEBIT)
+write.csv(cashFlow, file = 'cashFlow.csv')__
 
-#multiplying the LCY_AMOUNT and EX_RATE in the table
-#newTrans$AMOUNT <- as.data.frame(newTrans$AC_CCY*newTrans$LCY_AMOUNT)
-#newTrans$AMOUNT <- AMOUNT.newTrans$AC_CCY*newTrans$LCY_AMOUNT
+Importing the cashFlow dataset
 
-# Categorising the Product with Dummy Variables
-#library(dummies)
-#transClean <- dummy(newTrans$DRCR_IND, sep="_")
-#transClean <- as.data.frame(transClean)
-#transClean$DRCR_IND <- transClean #this puts all the new dummy columns back into the data frame
-
-#newTrans$CREDIT <- transClean$DRCR_IND_C
-#newTrans$DEBIT <- transClean$DRCR_IND_D
-
-#newTrans$CUSTOMER_UNIQUE_ID = sprintf("%f", newTrans$CUSTOMER_UNIQUE_ID)
-
-#cashFlow <- newTrans %>%
-#  group_by(CUSTOMER_UNIQUE_ID, CREDIT, DEBIT) %>%
-#  summarize(TOTAL_CREDIT = CREDIT%*%LCY_AMOUNT, TOTAL_DEBIT = LCY_AMOUNT%*%DEBIT)
-#write.csv(cashFlow, file = 'cashFlow.csv')
-
-
+```{r, echo=FALSE}
+library(tidyverse)
 cashFlow <- fread('cashFlow.csv')
+```
 
+Converting the Customer Unique ID to a string variable
+
+```{r, echo=FALSE}
 cashFlow$CUSTOMER_UNIQUE_ID = sprintf("%f", cashFlow$CUSTOMER_UNIQUE_ID)
+```
 
+Summing up the all the credits on the dataset per Customer Unique ID
+
+```{r, echo=FALSE}
 cashFlowHistory <- cashFlow %>%
   group_by(CUSTOMER_UNIQUE_ID) %>%
   summarize(TOTAL_CREDIT = sum(TOTAL_CREDIT), TOTAL_DEBIT = sum(TOTAL_DEBIT))
 
 cashFlowHistory$Balance <- cashFlowHistory$TOTAL_CREDIT - cashFlowHistory$TOTAL_DEBIT
+```
 
+Grading the Customer's Credit
 
+```{r, echo=FALSE}
 cashFlowHistory$Balance_Rating = 
   ifelse(cashFlowHistory$`Balance` <= 0, 0,
     ifelse(cashFlowHistory$`Balance` <= 1000, 4,
@@ -154,20 +227,27 @@ cashFlowHistory$Balance_Rating =
                 ifelse(cashFlowHistory$`Balance` <= 1000000, 9, 10))))))))
 
 count(cashFlowHistory, Balance_Rating)
+```
 
-# DROPPING COLUMNS
+DROPPING COLUMNS
+
+```{r, echo=FALSE}
 cashFlowBalanceRating <- subset(cashFlowHistory, select = c(CUSTOMER_UNIQUE_ID, Balance_Rating))
+```
 
-### THIS DATASET CONTAINS THE SUM OF BOTH CREDIT AND DEBIT TRANSACTIONS ON EACH CUSTOMER'S ACCOUNT WITHIN THE PERIOD SPECIFIED. IT ALSO CONTAINS THE NET DIFFERENCE BETWEEN THEM, BUR WE WILL USE THE CASHFLOW$BALANCE_RATING FOR OUR CREDIT SCORE FRAMEWORK
+This dataset contains the sum of both credit and debit transactions on each customer's account within the period specified. It also contains the net difference between them, but we will use the cashFlow$Balance_Rating for our credit score framework.
 
-
+```{r, echo=FALSE}
 bureau <- fread('bureau_score.csv')
 count(bureau, bureau$BUREAU_SCORE)
 count(bureau, bureau$BAL_NON_DELQ)
 count(bureau, bureau$BAL_30DPD)
 colnames(bureau)
+```
 
-#customer unique id as a string
+Customer unique id as a string
+
+```{r, echo=FALSE}
 bureau$CUSTOMER_UNIQUE_ID <- sprintf("%f", bureau$CUSTOMER_UNIQUE_ID)
 
 debt_history <- bureau%>%
@@ -188,14 +268,17 @@ debt_history$Debt_Rating =
 
 count(debt_history, Debt_Rating)
 unique(debt_history)
+```
 
-# Dropping columns
+Dropping columns
+
+```{r, echo=FALSE}
 Debt_Profile <- subset(debt_history, select = c(CUSTOMER_UNIQUE_ID, Debt_Rating))
+```
 
-## WE WILL MAKE USE OF THE DEBT_PROFILE TABLE FOR FURTHER ANALYSIS
+WE WILL MAKE USE OF THE DEBT_PROFILE TABLE FOR FURTHER ANALYSIS
 
-
-
+```{r, echo=FALSE}
 invest <- fread('all_investments.csv')
 count(invest, PRODUCT)
 count(invest, invest$PRODUCT_NAME)
@@ -203,25 +286,39 @@ count(invest, invest$ROLLOVER_ALLOWED)
 count(invest, invest$ROLLOVER_COUNT)
 count(invest, invest$CONTRACT_STATUS)
 colnames(invest)
+```
 
-#setting customer id as a string
+Setting customer id as a string
+
+```{r, echo=FALSE}
 invest$CUSTOMER_UNIQUE_ID <- sprintf("%f", invest$CUSTOMER_UNIQUE_ID)
+```
 
-# Dropping columns
+Dropping columns
+
+```{r, echo=FALSE}
 newInvest = subset(invest, select = -c(CONTRACT_REF_NO, PAYMENT_METHOD, CURRENCY, AMOUNT, ROLLOVER_ALLOWED, ROLLOVER_COUNT, CONTRACT_STATUS, MASKED_ACCOUNT))
+```
 
-# GROUP_BY TO FIND THE INVESTMENT STRENGTH OF THE CUSTOMER
+Performing a Split-Apply-Combine to find the Investment strength of the Customer
+
+```{r, echo=FALSE}
 investHistory <- newInvest %>%
   group_by(CUSTOMER_UNIQUE_ID) %>% 
   summarize(BOOKING_DATE=max(BOOKING_DATE), MATURITY_DATE=max(MATURITY_DATE), COMBINED_TENOR= sum(TENOR), MAIN_COMP_RATE=max(MAIN_COMP_RATE), INVESTMENT =sum(LCY_AMOUNT))
 
 investHistory$R.O.INVESTMENT <- investHistory$MAIN_COMP_RATE * investHistory$INVESTMENT
+```
 
-#DROPPING TABLES 
+Dropping Columns 
+
+```{r, echo=FALSE}
 investmentHistory <- subset(investHistory, select = -c(BOOKING_DATE, MATURITY_DATE, MAIN_COMP_RATE))
+```
 
-# RATING THE INVESTMENTS AND THE ROI OF THE CUSTOMERS
+RATING THE INVESTMENTS AND THE ROI OF THE CUSTOMERS
 
+```{r, echo=FALSE}
 investmentHistory$Investment_Rating = 
   ifelse(investmentHistory$`INVESTMENT` <= 0, 0,
     ifelse(investmentHistory$`INVESTMENT` <= 1000, 2,
@@ -231,9 +328,11 @@ investmentHistory$Investment_Rating =
             ifelse(investmentHistory$`INVESTMENT` <= 100000, 7,
               ifelse(investmentHistory$`INVESTMENT` <= 500000, 8,
                 ifelse(investmentHistory$`INVESTMENT` <= 1000000, 9, 10))))))))
+```
 
-# RATING THE ROI OF THE CUSTOMERS
+RATING THE ROI OF THE CUSTOMERS
 
+```{r, echo=FALSE}
 investmentHistory$ROI_Rating = 
   ifelse(investmentHistory$`R.O.INVESTMENT` <= 0, 10000,
     ifelse(investmentHistory$`R.O.INVESTMENT` <= 100000, 4,
@@ -245,21 +344,28 @@ investmentHistory$ROI_Rating =
                 ifelse(investmentHistory$`R.O.INVESTMENT` <= 100000000, 9, 10))))))))
 
 Investment_Profile <- subset(investmentHistory, select =c(CUSTOMER_UNIQUE_ID, Investment_Rating, ROI_Rating))
+```
 
-### THIS CONTAINS THE AMOUNT OF INVESTMENT A CUSTOMER HAS IN THE BANK. IT IS EQUAL TO THE INVESTMENT STRENGTH OF THE CUSTOMER. WE WILL MAKE USE OF THE INVESTMENT PROFILE TABLE FOR FURTHER ANALYSIS
+This contains the amount of investment a customer has in the bank. It is equal to the investment strength of the customer. We will make use of the Investment Profile table for further analysis.
 
+Importing the all_loans table
 
-
-
+```{r, echo=FALSE}
 loans <- fread('all_loans.csv')
 count(loans, loans$CURRENCY)
 count(loans, loans$ACCOUNT_STATUS)
+```
 
-#Finding the duration of the loan
+Finding the duration of the loan
+
+```{r, echo=FALSE}
 TENURE <- as.Date.character((loans$MATURITY_DATE), format="%m/%d/%Y")- as.Date.character((loans$BOOK_DATE), format="%m/%d/%Y")
 loans$TENURE <- TENURE
+```
 
-#recoding the Product code
+Recoding the Product code
+
+```{r, echo=FALSE}
 library(dummies)
 loansClean <- dummy(loans$PRODUCT_CODE, sep="_")
 loansClean <- as.data.frame(loansClean)
@@ -268,36 +374,50 @@ loansClean <- subset(loansClean, select= c(PRODUCT_CODE_AMPC, PRODUCT_CODE_PDLP)
 loans$PRODUCT_CODE <- loansClean
 loans <- c(loans, loansClean)
 loans <- as.data.frame(loans)
+```
 
-#Renaming the new columns
-#loansClean$PRODUCT_CODE_AMPC <- loans$PRODUCT_CODE.PRODUCT_CODE_AMPC
-#loansClean$PRODUCT_CODE_PDLP <- loans$PRODUCT_CODE.PRODUCT_CODE_PLDP
+Renaming the new columns
 
-#Making customer ID a character variable
+Making customer ID a character variable
+
+```{r, echo=FALSE}
 loans$CUSTOMER_UNIQUE_ID <- sprintf("%f", loans$CUSTOMER_UNIQUE_ID)
+```
 
-#Summing up tenure to get the loan history by customer id
+Summing up tenure to get the loan history by customer id
+
+```{r, echo=FALSE}
 HISTORY <-
   aggregate(loans$TENURE, by=list(CUSTOMER_UNIQUE_ID=loans$CUSTOMER_UNIQUE_ID), FUN=sum )
 
 HISTORY$history <- HISTORY$x
 HISTORY <- subset(HISTORY, select= -c(x))
+```
 
+Summing up amount the amount financed to get the total amount of loans each customer has recieved
 
-#Summing up amount the amount financed to get the total amount of loans each customer has recieved
+```{r, echo=FALSE}
 loanHistory <-
   aggregate(loans$AMOUNT_FINANCED, by=list(CUSTOMER_UNIQUE_ID=loans$CUSTOMER_UNIQUE_ID), FUN=sum )
 loanHistory$loanHistory <- loanHistory$x
 loanHistory<- subset(loanHistory, select = -c(x))
+```
 
-#merging the history and loan history tables as a scoring table
+Merging the history and loan history tables as a scoring table
+
+```{r, echo=FALSE}
 Credit <- merge(HISTORY, loanHistory, by=intersect(names(HISTORY), names(loanHistory)))
+```
 
-#Removing colums
-#newLoans <- subset(loans, select = -c(LOAN_REF, PRODUCT_CODE, PRODUCT_NAME, BOOK_DATE, MATURITY_DATE, CURRENCY, ACCOUNT_STATUS))
+Removing colums
 
+```{r, echo=FALSE}
+newLoans <- subset(loans, select = -c(LOAN_REF, PRODUCT_CODE, PRODUCT_NAME, BOOK_DATE, MATURITY_DATE, CURRENCY, ACCOUNT_STATUS))
+```
 
-# Rating the history(days) and loanHistory (total loan amount) per customer
+Rating the history(days) and loanHistory (total loan amount) per customer
+
+```{r, echo=FALSE}
 Credit$history_Rating =
   ifelse(Credit$`history` <= 300, 4,
     ifelse(Credit$`history` <= 500, 5,
@@ -317,22 +437,28 @@ Credit$loanHistory_Rating =
               ifelse(Credit$`loanHistory` <= 900000000, 9, 10)))))))
 
 CreditProfile <- subset(Credit, select =  c(CUSTOMER_UNIQUE_ID, history_Rating, loanHistory_Rating))
+```
 
-## WE WILL USE THE CREDITPROFILE TABLE FOR FURTHER ANALYSIS
+We will use the Credit Profile table for further analysis
 
-
-
+```{r, echo=FALSE}
 loansApp <- fread('all_loans_application.csv')
 count(loansApp, APPLICATION_STATUS)
 unique(loansApp)
 count(loansApp, MODULE)
 count(loansApp, DATE_OF_APPLY)
 count(loansApp, CUSTOMER_UNIQUE_ID)
+```
 
-#Setting Customer ID as a character variable
+Setting Customer ID as a character variable
+
+```{r, echo=FALSE}
 loansApp$CUSTOMER_UNIQUE_ID <- sprintf("%f", loansApp$CUSTOMER_UNIQUE_ID)
+```
 
-#dropping missing values
+Dropping missing values, diong a summary statistics on the dataset and grading the loan application of the customers
+
+```{r, echo=FALSE}
 library(tidyr)
 loansApp %>% drop_na()
 #aggregating the date of application per customer
@@ -349,12 +475,18 @@ LoanAppCredit$NEW_LOAN_RATING =
         ifelse(LoanAppCredit$MEAN_APPLIED_AMOUNT <= 100000, 8,
           ifelse(LoanAppCredit$MEAN_APPLIED_AMOUNT <= 500000, 8,
             ifelse(LoanAppCredit$MEAN_APPLIED_AMOUNT <= 1000000, 9, 10))))))
+```
 
 
+Importing the demographics dataset
 
+```{r, echo=FALSE}
 demo <- fread(file='all_demographics.csv', header = TRUE, sep = "|", stringsAsFactors = FALSE)
+```
 
-## Selecting columns 
+Selecting columns, and recoding the columns that I need for further analysis
+
+```{r, echo=FALSE}
 newDemo <- subset(demo, select = c(CUSTOMER_UNIQUE_ID, CUSTOMER_CATEGORY, MINOR, MARITAL_STATUS, DEPENDENT_OTHERS, SEX))
 
 demographics <- newDemo
@@ -371,13 +503,12 @@ demographics <- demographics %>% mutate(SEX=recode(SEX, `M`=7 , `F`=10, `P`=1, `
 
 demographics <- demographics %>% mutate_all(~replace(.,is.na(.), 1))
 
-
-#count(demographics, demographics$MARITAL_STATUS)
-
+```
 
 
-### MERGING ALL THE DATA SETS TOGETHER
+MERGING ALL THE DATA SETS TOGETHER
 
+```{r, echo=FALSE}
 df <-merge(acctBalanceRating, balanceHistoryRating, by=intersect(names(acctBalanceRating), names(balanceHistoryRating)), by.acctBalanceRating ="CUSTOMER_UNIQUE_ID", by.balanceHistoryRating ="CUSTOMER_UNIQUE_ID", all=TRUE, all.acctBalanceRating=all, all.balanceHistoryRating=all, sort=TRUE, suffixes=c(".acctBalanceRating", ".balanceHistoryRating"), no.dups=TRUE, incomparables = NULL)
 
 df <-merge(df, CreditProfile, by=intersect(names(df), names(CreditProfile)), by.df ="CUSTOMER_UNIQUE_ID", by.CreditProfile ="CUSTOMER_UNIQUE_ID", all=TRUE, all.df=all, all.CreditProfile=all, sort=TRUE, suffixes=c(".df", ".CreditProfile"), no.dups=TRUE, incomparables = NULL)
@@ -389,11 +520,13 @@ df <-merge(df, Debt_Profile, by=intersect(names(df), names(Debt_Profile)), by.df
 df <-merge(df, demographics, by=intersect(names(df), names(demographics)), by.df ="CUSTOMER_UNIQUE_ID", by.demographics ="CUSTOMER_UNIQUE_ID", all=TRUE, all.df=all, all.demographics=all, sort=TRUE, suffixes=c(".df", ".demographics"), no.dups=TRUE, incomparables = NULL)
 
 df <-merge(df, LoanAppCredit, by=intersect(names(df), names(LoanAppCredit)), by.df ="CUSTOMER_UNIQUE_ID", by.LoanAppCredit ="CUSTOMER_UNIQUE_ID", all=TRUE, all.df=all, all.LoanAppCredit=all, sort=TRUE, suffixes=c(".df", ".LoanAppCredit"), no.dups=TRUE, incomparables = NULL)
+```
 
+Assigning all NA values to 1. This is to be on the safe side as the customers affected do not have these information on their profile. Rather than completely discard them, which will ultimately have a negative effect on our data set, we set the NA values to the least rating (just to assume worse case scenerios for the customers whose details are missing, resulting in the NA values). When the customers eventually provide these information when they come to apply for loans, their credit scores can then be boosted appropriately.
 
-#Assigning all NA values to 1. This is to be on the safe side as the customers affected do not have these information on their profile. Rather than completely discard them, which will ultimately have a negative effect on our data set, we set the NA values to the least rating (just to assume worse case scenerios for the customers whose details are missing, resulting in the NA values). When the customers eventually provide these information when they come to apply for loans, their credit scores can then be boosted appropriately.
+Recoding the Loan_Classification column
 
-# Recoding the Loan_Classification column
+```{r, echo=FALSE}
 df <- df %>% mutate(LOAN_CLASSIFICATION=recode(LOAN_CLASSIFICATION, `PERFORMING`= 1, `NON-PERFORMING`=0))
 
 df <- df %>% mutate_all(~replace(.,is.na(.), 1))
@@ -411,11 +544,17 @@ unique(df)
 count(df, df$CUSTOMER_CATEGORY)
 count(df, df$MARITAL_STATUS)
 count(df, df$LOAN_CLASSIFICATION)
+```
 
-#dropping columns
+Dropping columns
+
+```{r, echo=FALSE}
 df <- subset(df, select = -c(MEAN_APPLIED_AMOUNT))
+```
 
-#Summing up all rows
+Summing up all rows
+
+```{r, echo=FALSE}
 df$TOTAL_SCORE <- df$BALANCE_RATING + df$HIGHEST_BALANCE_RATING + df$BALANCE_HISTORY_RATING + df$history_Rating + df$loanHistory_Rating + df$Balance_Rating + df$Debt_Rating + df$CUSTOMER_CATEGORY + df$MINOR + df$MARITAL_STATUS + df$DEPENDENT_OTHERS + df$SEX + df$NEW_LOAN_RATING
 
 # Assigning the TOTAL POSSIBLE SCORE
@@ -434,13 +573,14 @@ count <- count(df, df$CREDIT_SCORE_PERCENT)
 max(df$TOTAL_SCORE)
 
 df$CUSTOMER_UNIQUE_ID <- as.numeric(df$CUSTOMER_UNIQUE_ID)
+```
 
 
+Regression Analysis for my credit score model
 
-# Regression Analysis for my credit score model
+First dividing the data set into train and test set...
 
-# First dividing the data set into train and test set...
-
+```{r, echo=FALSE}
 dt = sort(sample(nrow(df), nrow(df)*.7))
 train <- (df[dt,])
 test <- (df[-dt,])
@@ -453,13 +593,14 @@ library(corrplot)
 corrplot::corrplot(CorrelationMatrix,  method = 'square') 
 corrplot(CorrelationMatrix, type = "lower")  
 corrplot.mixed(CorrelationMatrix, lower.col = "black", number.cex = .9)
+```
 
 
+Train the model: 
 
-# train the model: 
-#I tried to do the recursive feature selection for these variables, but because their correlation values are very similar with regards to our dependent variable, the RFE didn't work. So now, we'll try a linear model.
+Setting the cross validation parameters, Recursive Feature Elimination using the Boruta library
 
-# Setting the cross validation parameters, Recursive Feature Elimination
+```{r, echo=FALSE}
 library(randomForest)
 library(Boruta)
 
@@ -468,9 +609,11 @@ boruta.train <- Boruta(CREDIT_SCORE_PERCENT~ train$BALANCE_RATING+train$HIGHEST_
 print(boruta.train)
 
 plot(boruta.train, xlab = "", xaxt= "n")
+```
 
-# The blue boxplots corresponds to minimal credit scores while the blue boxplots corresponds to tentative and confirmed attributes. Doing the final Boruta
+The blue boxplots corresponds to minimal credit scores while the blue boxplots corresponds to tentative and confirmed attributes. Doing the final Boruta
 
+```{r, echo=FALSE}
 final.boruta <- TentativeRoughFix(boruta.train)
 print(final.boruta)
 # No attribute or variable is deemed unfit for our model. So we proceed to the final result.
@@ -480,58 +623,76 @@ getSelectedAttributes(final.boruta, withTentative = F)
 df_boruta <- attStats(final.boruta)
 class(df_boruta)
 print(df_boruta)
+```
 
-#All 13 variables are important in our model, so we use all 13 to create a model for the credit score framework.
+All 13 variables are important in our model, so we use all 13 to create a model for the credit score framework.
 
+```{r, echo=FALSE}
 CSF <- lm(CREDIT_SCORE_PERCENT~ train$BALANCE_RATING +train$HIGHEST_BALANCE_RATING +train$BALANCE_HISTORY_RATING +train$history_Rating +train$loanHistory_Rating +train$Balance_Rating+ train$Debt_Rating +train$CUSTOMER_CATEGORY +train$MINOR +train$MARITAL_STATUS +train$DEPENDENT_OTHERS +train$SEX +train$NEW_LOAN_RATING, data=train)
 
 plot(CSF)
 summary(CSF)
 anova(CSF)
+```
 
-## Predictive analysis for the credit score framework
+Predictive analysis for the credit score framework
+
+```{r, echo=FALSE}
 predict(CSF, data.frame(test))
 predCSF <- as.data.frame(predict(CSF, data.frame(test)))
+```
 
 
 
 
+Loan Classification Model (Logit Model)
 
-# Loan Classification Model (Logit Model)...
+Recursive Feature Selection for the Loan Classification model using the Boruta library also.
 
-# Recursive Feature Selection for the Loan Classification model
+```{r, echo=FALSE}
 set.seed(12)
 boruta2.train <- Boruta(LOAN_CLASSIFICATION~ BALANCE_RATING + HIGHEST_BALANCE_RATING + BALANCE_HISTORY_RATING + history_Rating + loanHistory_Rating + Balance_Rating + Debt_Rating + CUSTOMER_CATEGORY + MINOR + MARITAL_STATUS + DEPENDENT_OTHERS + SEX + NEW_LOAN_RATING, data=train)
 
 print(boruta2.train)
 plot(boruta2.train)
+```
 
-# The blue boxplots corresponds to minimal and average variables, the black boxplot represents the rejected variables while the blue boxplots corresponds to tentative and confirmed attributes. Doing the final Boruta for this model
+The blue boxplots corresponds to minimal and average variables, the black boxplot represents the rejected variables while the blue boxplots corresponds to tentative and confirmed attributes. Doing the final Boruta for this model
 
+```{r, echo=FALSE}
 last.boruta <- TentativeRoughFix(boruta2.train)
 print(last.boruta)
 # 5 attribute or variable is deemed unfit for our model. So we remove them from our model
 getSelectedAttributes(last.boruta, withTentative = F)
+```
 
-#Creating a dataframe to store up the last boruta
+Creating a dataframe to store up the last boruta
+
+```{r, echo=FALSE}
 df_last_boruta <- attStats(last.boruta)
 class(df_last_boruta)
 print(df_last_boruta)
+```
 
+The Model
 
-
+```{r, echo=FALSE}
 LCM <- glm(LOAN_CLASSIFICATION ~ BALANCE_RATING + HIGHEST_BALANCE_RATING + BALANCE_HISTORY_RATING + history_Rating + loanHistory_Rating + Balance_Rating + Debt_Rating + NEW_LOAN_RATING, data=train, family = binomial(link = "logit"))
 summary(LCM)
+```
 
-#This model can explain 83% of the variance of the dataset.
+This model can explain 83% of the variance of the dataset. Generally, loans are seen as non performing when their tenure has exceeded a period of 90days. All the variables in the models have a way of affecting the customer's ability to make sure their loans do not exceed the 90 days tenure.
 
-# Predictive analysis for the loan classification model
+Predictive analysis for the loan classification model
+
+```{r, echo=FALSE}
 predLCM <- predict(LCM, data.frame(test))
 invlogit(predLCM)
 
 table(test$LOAN_CLASSIFICATION, invlogit(predLCM) > 0.5)
+```
 
-# 37,949 observations are real Truths of Performing loans, 552 are False-Truths of Non-Performing loans, 91 observations are False Performing loans, while 83 are False Non Performing loans. 
+37,949 observations are real Truths of Performing loans, 552 are False-Truths of Non-Performing loans, 91 observations are False Performing loans, while 83 are False Non Performing loans. 
 
 
-# Conclusion
+Conclusion
