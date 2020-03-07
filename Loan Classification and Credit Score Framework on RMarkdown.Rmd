@@ -1,18 +1,8 @@
 ---
-title: "Untitled"
-author: "Kenneth I. D., Ayooluwa Adedipe, Patience Kadri"
+title: "Loan Classification and Credit Score Framework"
+author: "Kenneth I. D., Ayooluwa Adedipe, Patience Kadiri"
 date: "3/6/2020"
 output: html_document
----
-
----
-title: "Exploring The 'mtcars' Data Set"
-author: "Kenneth I. D., Ayooluwa Adedipe, Patience Kadri"
-date: "2/1/2020"
-output:
-  html_document: default
-  pdf_document: default
-  word_document: default
 ---
 
 
